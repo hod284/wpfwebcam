@@ -1,0 +1,36 @@
+name: WPF Build (auto + manual)
+
+on:
+  push:
+    branches:
+      - main   # main에 커밋되면 자동 빌드
+  workflow_dispatch:   # 버튼 눌러서 수동 빌드
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore packages
+        run: nuget restore WpfApp1.sln
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build WPF (.NET Framework)
+        run: msbuild WpfApp1.sln /p:Configuration=Release
+
+      - name: Zip output
+        run: |
+          Compress-Archive -Path WpfApp1/bin/Release/* -DestinationPath WpfApp.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WpfApp
+          path: WpfApp.zip

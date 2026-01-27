@@ -134,6 +134,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <None Include=".github\workflows\gitaction.yml" />
     <None Include="Assets\coco.names" />
     <None Include="Assets\yolov8n.onnx" />
     <None Include="packages.config" />
