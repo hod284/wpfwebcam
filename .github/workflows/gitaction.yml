@@ -17,7 +17,7 @@ jobs:
         uses: NuGet/setup-nuget@v2
 
       - name: Restore packages
-        run: nuget restore WpfApp1.sln
+        run: nuget restore wpfCCTV.sln
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
