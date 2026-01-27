@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace WpfcCCTV.Properties
+namespace wpfCCTV.Properties
 {
 
 

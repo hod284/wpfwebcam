@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WpfcCCTV", "WpfcCCTV.csproj", "{0D64C490-3FBE-4D3B-9CC1-B5E2483E2AD1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "wpfCCTV", "wpfCCTV.csproj", "{840F5616-5EFB-4BF1-89AE-41A139131134}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{0D64C490-3FBE-4D3B-9CC1-B5E2483E2AD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0D64C490-3FBE-4D3B-9CC1-B5E2483E2AD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0D64C490-3FBE-4D3B-9CC1-B5E2483E2AD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0D64C490-3FBE-4D3B-9CC1-B5E2483E2AD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{840F5616-5EFB-4BF1-89AE-41A139131134}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{840F5616-5EFB-4BF1-89AE-41A139131134}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{840F5616-5EFB-4BF1-89AE-41A139131134}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{840F5616-5EFB-4BF1-89AE-41A139131134}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {405CD4DA-9CB2-4C42-BF21-63BB8540FB0C}
+		SolutionGuid = {5BC4BC8D-C1FC-4265-820F-453704C17B6E}
 	EndGlobalSection
 EndGlobal
