@@ -27,22 +27,19 @@ jobs:
       - name: Build WPF (.NET Framework)
         run: msbuild wpfCCTV.csproj /p:Configuration=Release
 
-
       - name: Check output
         run: |
-          dir wpfCCTV
-          dir wpfCCTV/bin
-          dir wpfCCTV/bin/Release
+          Get-ChildItem -Path ./bin/Release -Recurse
 
       - name: Zip output
         run: |
            Compress-Archive `
-            -Path wpfCCTV/bin/Release/* `
-            -DestinationPath wpfCCTV.zip `
+            -Path bin/Release/* `
+            -DestinationPath wpfCCTV_Build.zip `
             -Force
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CCTV
-          path: CCTV.zip
+          name: CCTV-Binary
+          path: wpfCCTV_Build.zip
