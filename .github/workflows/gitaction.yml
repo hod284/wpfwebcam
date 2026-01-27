@@ -18,14 +18,14 @@ jobs:
         uses: NuGet/setup-nuget@v2
 
       - name: Restore packages
-        run: nuget restore wpfCCTV/wpfCCTV.csproj
+        run: nuget restore wpfCCTV.csproj
 
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Build WPF (.NET Framework)
-        run: msbuild wpfCCTV/wpfCCTV.csproj /p:Configuration=Release
+        run: msbuild wpfCCTV.csproj /p:Configuration=Release
 
 
       - name: Check output
