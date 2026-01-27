@@ -11,19 +11,28 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
 
       - name: Restore packages
-        run: nuget restore wpfCCTV.sln
+        run: nuget restore wpfCCTV/wpfCCTV.csproj
+
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Build WPF (.NET Framework)
-        run: msbuild wpfCCTV.sln /p:Configuration=Release
+        run: msbuild wpfCCTV/wpfCCTV.csproj /p:Configuration=Release
+
+
+      - name: Check output
+        run: |
+          dir wpfCCTV
+          dir wpfCCTV/bin
+          dir wpfCCTV/bin/Release
 
       - name: Zip output
         run: |
