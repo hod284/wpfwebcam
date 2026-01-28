@@ -6,7 +6,93 @@
         xmlns:local="clr-namespace:wpfCCTV"
         mc:Ignorable="d"
         Title="TrrigerSetting" Height="450" Width="800">
-    <Grid>
-        
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 설명 -->
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,15">
+            <Run FontWeight="Bold" FontSize="14">조건부 자동 저장</Run>
+            <LineBreak/>
+            <Run FontSize="12" Foreground="Gray">
+                선택한 객체가 감지되면 자동으로 이미지를 저장합니다.
+                감지 정보는 JSON 파일로 함께 저장됩니다.
+            </Run>
+        </TextBlock>
+
+        <!-- 저장 경로 -->
+        <Border Grid.Row="1" BorderBrush="#CCCCCC" BorderThickness="1" 
+                Padding="10" Margin="0,0,0,10" Background="#F9F9F9">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="저장 폴더" FontWeight="Bold" Margin="0,0,0,5"/>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="SavePathTextBox" Grid.Column="0" Height="30" 
+                             VerticalContentAlignment="Center" IsReadOnly="True"
+                             Text="폴더를 선택하세요"/>
+                    <Button x:Name="BrowseButton" Grid.Column="1" Content="찾아보기" 
+                            Width="80" Height="30" Margin="5,0,0,0" Click="BrowseButton_Click"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- 객체 선택 -->
+        <Border Grid.Row="2" BorderBrush="#CCCCCC" BorderThickness="1" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="감지할 객체 선택" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBlock Grid.Row="1" Text="하나 이상 선택하세요" FontSize="11" 
+                           Foreground="Gray" Margin="0,0,0,10"/>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="ClassListPanel">
+                        <!-- 동적으로 체크박스 생성 -->
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- 선택 정보 -->
+        <Border Grid.Row="3" Background="#E3F2FD" Padding="10" Margin="0,10,0,0">
+            <TextBlock x:Name="SelectionInfoText" Text="0개 선택됨" 
+                       FontSize="12" FontWeight="Bold"/>
+        </Border>
+
+        <!-- 버튼 -->
+        <Grid Grid.Row="4" Margin="0,15,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="1" Content="활성화" Width="100" Height="35" 
+                    Click="EnableButton_Click" Margin="5,0"/>
+            <Button Grid.Column="2" Content="비활성화" Width="100" Height="35" 
+                    Click="DisableButton_Click" Margin="5,0"/>
+            <Button Grid.Column="3" Content="취소" Width="100" Height="35" 
+                    Click="CancelButton_Click" Margin="5,0"/>
+        </Grid>
     </Grid>
 </Window>

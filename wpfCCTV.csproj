@@ -68,11 +68,22 @@
     <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reactive, Version=6.1.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
+      <HintPath>packages\System.Reactive.6.1.0\lib\net472\System.Reactive.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Reactive.Windows.Forms, Version=3.0.6000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
+      <HintPath>packages\System.Reactive.Windows.Forms.6.1.0\lib\net472\System.Reactive.Windows.Forms.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
     <Reference Include="System.Security" />
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web" />
+    <Reference Include="System.Windows" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -91,6 +102,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Models\ModelManager.cs" />
     <Compile Include="TrrigerSetting.xaml.cs">
       <DependentUpon>TrrigerSetting.xaml</DependentUpon>
     </Compile>
@@ -134,6 +146,8 @@
     </EmbeddedResource>
     <None Include=".github\workflows\gitaction.yml" />
     <None Include="Assets\coco.names" />
+    <None Include="Assets\face.names" />
+    <None Include="Assets\yolov12n-face.onnx" />
     <None Include="Assets\yolov8n.onnx" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
