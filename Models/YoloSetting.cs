@@ -52,7 +52,7 @@ namespace wpfCCTV.Models
         /// <summary>
         /// NMS (Non-Maximum Suppression) IoU 임계값
         /// </summary>
-        public float NmsThreshold { get; set; } = 0.45f;
+        public float NmsThreshold { get; set; } = 0.3f;
 
         /// <summary>
         /// GPU 사용 여부 (CUDA 설치 필요)
