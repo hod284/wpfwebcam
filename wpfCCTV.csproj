@@ -183,10 +183,18 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <None Include=".github\workflows\gitaction.yml" />
-    <None Include="Assets\coco.names" />
-    <None Include="Assets\face.names" />
-    <None Include="Assets\yolov12n-face.onnx" />
-    <None Include="Assets\yolov8n.onnx" />
+    <None Include="Assets\coco.names">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Assets\face.names">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Assets\yolov12n-face.onnx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Assets\yolov8n.onnx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
