@@ -106,19 +106,20 @@ namespace wpfCCTV.Models
             int newHeight = (int)(image.Height * scale);
             Cv2.Resize(image, resized, new Size(newWidth, newHeight));
             //패딩추가(중앙정렬)
-            Mat padded = new Mat(new Size(Settings.InputWidth, Settings.InputHeight), MatType.CV_8SC3, new Scalar(114, 114, 114));
+            Mat padded = new Mat(new Size(Settings.InputWidth, Settings.InputHeight), MatType.CV_8UC3, new Scalar(114, 114, 114));
             int x = (Settings.InputWidth - newWidth) / 2;
             int y = (Settings.InputHeight - newHeight) / 2;
             resized.CopyTo(new Mat(padded, new Rect(x, y, newWidth, newHeight)));
             //bgr -rgb 변환
-            Cv2.CvtColor(padded, padded, ColorConversionCodes.BGR2RGB);
+            Mat rgb = new Mat();
+            Cv2.CvtColor(padded, rgb, ColorConversionCodes.BGR2RGB);
             //정규화
             var tensor = new DenseTensor<float>(new[] { 1, 3, Settings.InputHeight, Settings.InputWidth });
             for (int y_pos = 0; y_pos < Settings.InputHeight; y_pos++)
             {
-                for (int x_pos = 0; x_pos < Settings.InputHeight; x_pos++)
+                for (int x_pos = 0; x_pos < Settings.InputWidth; x_pos++)
                 { 
-                     var pixel =padded.At<Vec3b>(y_pos, x_pos);
+                     var pixel =rgb.At<Vec3b>(y_pos, x_pos);
                     tensor[0, 0, y_pos, x_pos] = pixel[0] / 255.0f; // R
                     tensor[0, 1, y_pos, x_pos] = pixel[1] / 255.0f; // G
                     tensor[0, 2, y_pos, x_pos] = pixel[2] / 255.0f; // B
@@ -126,6 +127,7 @@ namespace wpfCCTV.Models
             }
             resized.Dispose();
             padded.Dispose();
+            rgb.Dispose();
             return tensor;
         }
         /// <summary>

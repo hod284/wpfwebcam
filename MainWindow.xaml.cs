@@ -26,6 +26,8 @@ namespace wpfCCTV
         private Mat CurrentDetectionFrame;
         private readonly Random Randoms = new Random();
         private readonly Dictionary<int, Color> ClassColor= new Dictionary<int, Color>();
+        private readonly object CaptureLock = new object(); // Capture 동기화용
+        private bool IsStoppingCapture = false; // 중복 호출 방지
 
         // 비디오 프로그레스 바 관련
         private int TotalFrames = 0;
@@ -259,7 +261,7 @@ namespace wpfCCTV
                 }
                 Capture = new VideoCapture(cameraIndex);
 
-                if (Capture.IsOpened())
+                if (!Capture.IsOpened())
                 {
                     MessageBox.Show($"카메라 {cameraIndex}을(를) 열 수 없습니다.\n" +
                         "다른 프로그램에서 사용 중이거나 존재하지 않을 수 있습니다.",
@@ -357,19 +359,28 @@ namespace wpfCCTV
         /// <param name="token"></param>
         private void ProcessVideoStream(CancellationToken token)
         {
-            while (!token.IsCancellationRequested && Capture != null)
+            while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    CurrentFrame = new Mat();
-                    if (!Capture.Read(CurrentFrame) || CurrentFrame.Empty())
+                    VideoCapture captureRef;
+                    lock (CaptureLock)
+                    {
+                        if (Capture == null || Capture.IsDisposed)
+                            break;
+                        captureRef = Capture;
+                    }
+
+                    Mat frame = new Mat();
+                    if (!captureRef.Read(frame) || frame.Empty())
                     { 
-                         Dispatcher.Invoke(() =>Log("비디오 종류"));
+                         Dispatcher.Invoke(() =>Log("비디오 종료"));
+                        frame.Dispose();
                         break;
                     }
                     CurrentFrameNumber++;
 
-                    // 프로그래스바 업그레이드
+                    // 프로그래스바 업데이트
                     Dispatcher.Invoke(() =>
                     {
                         if (VideoProgressPanel.Visibility == Visibility.Visible && TotalFrames > 0)
@@ -378,10 +389,16 @@ namespace wpfCCTV
                             CurrentTimeText.Text = FormatTime(CurrentFrameNumber / VideoFps);
                         }
                     });
+                    
+                    // ✅ 프레임 복사본을 전달
+                    Mat frameCopy = frame.Clone();
                     Dispatcher.Invoke(async () =>
                     {
-                        await DetectAndDisplayAsync(CurrentFrame);
+                        await DetectAndDisplayAsync(frameCopy);
+                        frameCopy.Dispose(); // 사용 후 정리
                     });
+                    
+                    frame.Dispose(); // 원본 정리
                     Thread.Sleep(33);
                 }
                 catch (Exception ex)
@@ -498,7 +515,7 @@ namespace wpfCCTV
             // 클래스별 고유색상 지정
             foreach (var detection in detections) 
             {
-                if (ClassColor.ContainsKey(detection.ClassId))
+                if (!ClassColor.ContainsKey(detection.ClassId))
                 {
                     ClassColor[detection.ClassId] = System.Windows.Media.Color.FromRgb(
                         (byte)Randoms.Next(50, 255),
@@ -620,30 +637,58 @@ namespace wpfCCTV
         {
             try
             {
-                if (Capture == null || !Capture.IsOpened())
+                VideoCapture captureToSave;
+                lock (CaptureLock)
                 {
-                    MessageBox.Show("비디오가 열려있지 않습니다.", "오류");
-                    return;
+                    if (Capture == null || Capture.IsDisposed || !Capture.IsOpened())
+                    {
+                        MessageBox.Show("비디오가 열려있지 않습니다.", "오류");
+                        return;
+                    }
+                    captureToSave = Capture;
                 }
 
                 // 현재 재생 중지
                 bool wasPlaying = CancellationTokenSource != null && !CancellationTokenSource.IsCancellationRequested;
-
 
                 if (wasPlaying)
                 {
                     StopVideoCapture();
                     await Task.Delay(500); // 잠시 대기
                 }
+                
                 // 비디오 다시 열기
-                Capture.Set(VideoCaptureProperties.PosFrames, 0);
+                lock (CaptureLock)
+                {
+                    if (Capture != null && !Capture.IsDisposed)
+                    {
+                        Capture.Set(VideoCaptureProperties.PosFrames, 0);
+                    }
+                    else
+                    {
+                        MessageBox.Show("비디오가 닫혔습니다.", "오류");
+                        return;
+                    }
+                }
                 Log($"🎞️ 모든 프레임 저장 시작...");
                 StatusText.Text = "프레임 저장 중...";
                 StatusText.Visibility = Visibility.Visible;
                 int savedCount = 0;
                 Mat frame = new Mat();
-                while (Capture.Read(frame) && !frame.Empty())
+                
+                while (true)
                 {
+                    bool readSuccess;
+                    lock (CaptureLock)
+                    {
+                        if (Capture == null || Capture.IsDisposed)
+                            break;
+                        readSuccess = Capture.Read(frame);
+                    }
+                    
+                    if (!readSuccess || frame.Empty())
+                        break;
+                
                     // 활성 감지 모델
                     var detections = Manager?.ActiveModel?.Detect(frame);
                     var resultFrame = DrawDetections(frame.Clone(), detections ?? new List<Detection>());
@@ -664,8 +709,16 @@ namespace wpfCCTV
                     }
                     resultFrame.Dispose();
                 }
+                
                 frame.Dispose();
-                Capture.Set(VideoCaptureProperties.PosFrames, 0);
+                
+                lock (CaptureLock)
+                {
+                    if (Capture != null && !Capture.IsDisposed)
+                    {
+                        Capture.Set(VideoCaptureProperties.PosFrames, 0);
+                    }
+                }
                 StatusText.Visibility = Visibility.Collapsed;
                 Log($"✅ 프레임 저장 완료: {savedCount}개");
                 MessageBox.Show($"{savedCount}개의 프레임이 저장되었습니다!\n위치: {folderPath}",
@@ -810,15 +863,40 @@ namespace wpfCCTV
         /// </summary>
         private void StopVideoCapture()
         {
-            CancellationTokenSource?.Cancel();
-            Capture?.Release();
-            Capture?.Dispose();
+            lock (CaptureLock)
+            {
+                // 이미 중지 중이면 리턴
+                if (IsStoppingCapture)
+                    return;
+                IsStoppingCapture = true;
+            }
 
-            VideoProgressPanel.Visibility = Visibility.Collapsed;
-            CurrentFrameNumber = 0;
+            try
+            {
+                CancellationTokenSource?.Cancel();
 
-            ResetWebcamButtons();
-            Log("⏹ 비디오 중지");
+                lock (CaptureLock)
+                {
+                    if (Capture != null && !Capture.IsDisposed)
+                    {
+                        Capture.Dispose(); // Dispose가 Release를 자동으로 호출함
+                    }
+                    Capture = null;
+                }
+
+                VideoProgressPanel.Visibility = Visibility.Collapsed;
+                CurrentFrameNumber = 0;
+
+                ResetWebcamButtons();
+                Log("⏹ 비디오 중지");
+            }
+            finally
+            {
+                lock (CaptureLock)
+                {
+                    IsStoppingCapture = false;
+                }
+            }
         }
 
         private void ResetWebcamButtons()
