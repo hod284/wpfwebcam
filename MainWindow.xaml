@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:wpfCCTV"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="1000" Width="900">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -104,7 +104,8 @@
                 <Image x:Name="DisplayImage" Stretch="Uniform"/>
                 <TextBlock x:Name="StatusText" Text="모델 로딩 중..." 
                            Foreground="White" FontSize="20" FontWeight="Bold"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Visibility="Visible"/>
 
                 <!-- 현재 모델 표시 -->
                 <Border Background="#AA000000" Padding="10,5" 

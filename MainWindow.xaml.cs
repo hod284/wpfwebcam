@@ -218,7 +218,7 @@ namespace wpfCCTV
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void LoadImageButton_Click(object sender, RoutedEventArgs e)
+        private  void LoadImageButton_Click(object sender, RoutedEventArgs e)
         {
             //파일 열기 다이얼로그
             var Dialog = new OpenFileDialog
@@ -235,7 +235,7 @@ namespace wpfCCTV
                     // 이미지 읽는 함수
                     CurrentFrame =Cv2.ImRead(Dialog.FileName);
                     Log($"이미지 파일 로드: {Dialog.FileName}");
-                    await DetectAndDisplayAsync(CurrentFrame);
+                    DetectAndDisplayAsync(CurrentFrame);
                 }
                 catch (Exception ex)
                 {
@@ -371,15 +371,23 @@ namespace wpfCCTV
                         captureRef = Capture;
                     }
 
-                    Mat frame = new Mat();
-                    if (!captureRef.Read(frame) || frame.Empty())
+                    CurrentFrame = new Mat();
+                    if (!captureRef.Read(CurrentFrame) || CurrentFrame.Empty())
                     { 
                          Dispatcher.Invoke(() =>Log("비디오 종료"));
-                        frame.Dispose();
+                        CurrentFrame.Dispose();
                         break;
                     }
                     CurrentFrameNumber++;
-
+                    //  1. 먼저 원본 프레임을 즉시 화면에 표시
+                    Dispatcher.Invoke(() =>
+                    {
+                        try
+                        {
+                            DisplayImage.Source = CurrentFrame.ToBitmapSource();
+                        }
+                        catch { /* 무시 */ }
+                    });
                     // 프로그래스바 업데이트
                     Dispatcher.Invoke(() =>
                     {
@@ -389,17 +397,11 @@ namespace wpfCCTV
                             CurrentTimeText.Text = FormatTime(CurrentFrameNumber / VideoFps);
                         }
                     });
-                    
+
                     // ✅ 프레임 복사본을 전달
-                    Mat frameCopy = frame.Clone();
-                    Dispatcher.Invoke(async () =>
-                    {
-                        await DetectAndDisplayAsync(frameCopy);
-                        frameCopy.Dispose(); // 사용 후 정리
-                    });
-                    
-                    frame.Dispose(); // 원본 정리
-                    Thread.Sleep(33);
+                    var frame = CurrentFrame;
+                    Dispatcher.Invoke(() =>  DetectAndDisplayAsync(frame));
+
                 }
                 catch (Exception ex)
                 {
@@ -409,7 +411,7 @@ namespace wpfCCTV
             }
             Dispatcher.Invoke(StopVideoCapture);
         }
-        private async Task DetectAndDisplayAsync(Mat frame)
+        private  void DetectAndDisplayAsync(Mat frame)
         {
             // 활성 모델로 감지
             if (Manager?.ActiveModel == null || frame == null || frame.Empty())
@@ -418,12 +420,34 @@ namespace wpfCCTV
             { 
                  var start = DateTime.Now;
                 // yolo감지
-                var detections = await Task.Run(() => Manager.ActiveModel.Detect(frame));
+                var detections =   Manager.ActiveModel.Detect(frame);
+                if (detections == null)
+                {
+                    Log("⚠️ 감지 결과가 null입니다");
+                    return;
+                }
+
                 var elapsedMs = (DateTime.Now - start).TotalMilliseconds;
+                //  Detection 객체 유효성 검증
+                var validDetections = detections.Where(d =>
+               d != null &&
+               !string.IsNullOrEmpty(d.ClassName) &&
+               d.ClassId >= 0 &&
+               d.Confidence > 0
+           ).ToList();
+                if (validDetections.Count != detections.Count)
+                {
+                    Log($"⚠️ 잘못된 감지 결과 제외: {detections.Count - validDetections.Count}개");
+                }
+
                 // 감지 결과 그리기
+                CurrentDetectionFrame?.Dispose();
                 CurrentDetectionFrame = DrawDetections(frame.Clone(), detections);
                 // wpf 컨트롤 에 표시
-                DisplayImage.Source = CurrentDetectionFrame.ToBitmapSource();
+                if (CurrentDetectionFrame != null && !CurrentDetectionFrame.Empty())
+                {
+                    DisplayImage.Source = CurrentDetectionFrame.ToBitmapSource();
+                }
                 //통계업데이트 
                 UpdateStatistics(detections,elapsedMs);
                 // 자동 저장 처리
@@ -467,7 +491,7 @@ namespace wpfCCTV
                 }
                 else
                 {
-                    ClassCountTotal[item.Class]+= item.Count;
+                    ClassCountTotal[item.Class] = item.Count;
                 }
             }
             //  현재 프레임 통계

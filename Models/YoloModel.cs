@@ -136,21 +136,38 @@ namespace wpfCCTV.Models
         private List<Detection> PostprocessOutput(float[] output, int originalWidth, int originalHeight)
         { 
             var detections = new List<Detection>();
+            if (output == null || output.Length == 0)
+            {
+                return detections;
+            }
             // YOLOv8 출력 형식: [1, 84, 8400]
             // 84 = 4(bbox) + 80(classes)
             // 8400 = 감지 후보 수
             // YOLOv12n-face: 4(bbox) + 1(face) = 5
             int dimension = 4 + Settings.ClassCount;// 4 + 클래스수
+            if (dimension <= 4)
+            {
+                throw new InvalidOperationException($"잘못된 ClassCount: {Settings.ClassCount}");
+            }
             int row =output.Length / dimension;
-
+            if (row <= 0)
+            {
+                return detections;
+            }
             float scalex = (float)originalWidth / Settings.InputWidth;
             float scaley = (float)originalHeight / Settings.InputHeight;
 
             for (int i = 0; i < row; i++)
             { 
                  int index = i * dimension;
+
+                // 인덱스 범위 체크
+                if (index + dimension > output.Length)
+                {
+                    break;
+                }
                 // 바운딩 박스 정보 (중심 좌표 + 너비/높이)
-               float centerx = output[index];
+                float centerx = output[index];
                float centery = output[index + 1];
                float width = output[index + 2];
                float height = output[index + 3];
@@ -180,11 +197,23 @@ namespace wpfCCTV.Models
                 // 신뢰도 임계값 체크
                 if (maxConfidence < Settings.ConfidenceThreshold)
                     continue;
+                // ⭐ ClassId 유효성 체크
+                if (maxClassid < 0 || maxClassid >= ClassNames.Length)
+                {
+                    // 범위 벗어난 ClassId는 무시
+                    continue;
+                }
                 // 중심 좌표 -> 최상단 좌표 변환 및 스케일 조절
                 float x = (centerx - width / 2) * scalex;
                 float y = (centery - height / 2) * scaley;
                 width *= scalex;
                 height *= scaley;
+                if (width <= 0 || height <= 0 || x < 0 || y < 0 ||
+                  x + width > originalWidth || y + height > originalHeight)
+                {
+                    // 잘못된 박스는 무시
+                    continue;
+                }
                 detections.Add( new Detection
                 {
                     ClassId = maxClassid,
@@ -196,6 +225,7 @@ namespace wpfCCTV.Models
                     Height = height
                 });
             }
+            // NMS (Non-Maximum Suppression) 적용
             return ApplyNMS(detections);
         }
         /// <summary>
