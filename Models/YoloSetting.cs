@@ -69,11 +69,12 @@ namespace wpfCCTV.Models
         /// </summary>
         public static YoloSettings CreateFaceDetectionSettings()
         {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             return new YoloSettings
             {
                 ModelType = YoloModelType.FaceDetection,
-                ModelPath = "Assets/yolov12n-face.onnx",
-                ClassNamesPath = "Assets/face.names",
+                ModelPath = System.IO.Path.Combine(baseDir, "Assets", "yolov12n-face.onnx"),
+                ClassNamesPath = System.IO.Path.Combine(baseDir, "Assets", "face.names"),
                 InputWidth = 640,
                 InputHeight = 640,
                 ConfidenceThreshold = 0.5f,
@@ -88,11 +89,12 @@ namespace wpfCCTV.Models
         /// </summary>
         public static YoloSettings CreateObjectDetectionSettings()
         {
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             return new YoloSettings
             {
                 ModelType = YoloModelType.ObjectDetection,
-                ModelPath = "Assets/yolov8n.onnx",
-                ClassNamesPath = "Assets/coco.names",
+                ModelPath = System.IO.Path.Combine(baseDir, "Assets", "yolov8n.onnx"),
+                ClassNamesPath = System.IO.Path.Combine(baseDir, "Assets", "coco.names"),
                 InputWidth = 640,
                 InputHeight = 640,
                 ConfidenceThreshold = 0.5f,

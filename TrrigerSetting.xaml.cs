@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -42,8 +43,8 @@ namespace wpfCCTV
             SavePath = "";
         }
         private void IniteSelectList()
-        { 
-           foreach (var className in _commonClasses)
+        {
+            foreach (var className in _commonClasses)
             {
                 var checkBox = new CheckBox
                 {
@@ -58,12 +59,12 @@ namespace wpfCCTV
 
         }
         private void ClassCheckBox_Changed(object sender, RoutedEventArgs e)
-        { 
-              UpdateSelectedClasses();
+        {
+            UpdateSelectedClasses();
         }
         private void UpdateSelectedClasses()
         {
-           int Count = ClassListPanel.Children.OfType<CheckBox>().Count(x => x.IsChecked == true);
+            int Count = ClassListPanel.Children.OfType<CheckBox>().Count(x => x.IsChecked == true);
             SelectionInfoText.Text = $"Selected Classes: {Count}";
         }
 
@@ -81,6 +82,52 @@ namespace wpfCCTV
                 SavePath = dialog.SelectedPath;
             }
         }
+        private void EnableButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(SavePath))
+            { 
+                MessageBox.Show("저장 경로를 선택하세요.", "알림", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var selectedClassesbox = ClassListPanel.Children.OfType<CheckBox>()
+                .Where(cb => cb.IsChecked == true)
+                .ToList();
+            if (selectedClassesbox.Count == 0)
+            {
+                MessageBox.Show("하나 이상의 클래스를 선택하세요.", "알림", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            if (!Directory.Exists(SavePath))
+            {
+                try
+                { 
+                    Directory.CreateDirectory(SavePath);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"저장 경로를 생성할 수 없습니다: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+            //선택된 클래스 저장
+            SelectedClasses = new HashSet<string>(selectedClassesbox.Select(cb => cb.Content.ToString()));
+            IsEnabled = true;
+            DialogResult = true;
+            Close();
+        }
+        private void DisableButton_Click(object sender, RoutedEventArgs e)
+        {
+            IsEnabled = false;
+            SelectedClasses = new HashSet<string>();
+            DialogResult = true;
+            Close();
 
+
+        }
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            DialogResult = false;
+            Close();
+        }
     }
 }
+ 

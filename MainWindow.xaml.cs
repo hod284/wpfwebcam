@@ -48,8 +48,8 @@ namespace wpfCCTV
 
         public MainWindow()
         {
-            InitializeYoloModel();
             InitializeComponent();
+            InitializeYoloModel();
         }
         /// <summary>
         /// 초기화
