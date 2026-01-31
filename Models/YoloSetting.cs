@@ -78,7 +78,7 @@ namespace wpfCCTV.Models
                 InputWidth = 640,
                 InputHeight = 640,
                 ConfidenceThreshold = 0.5f,
-                NmsThreshold = 0.45f,
+                NmsThreshold = 0.3f,
                 UseGpu = false,
                 ClassCount = 1  // face만
             };
@@ -98,7 +98,7 @@ namespace wpfCCTV.Models
                 InputWidth = 640,
                 InputHeight = 640,
                 ConfidenceThreshold = 0.5f,
-                NmsThreshold = 0.45f,
+                NmsThreshold = 0.3f,
                 UseGpu = false,
                 ClassCount = 80  // COCO 80개
             };

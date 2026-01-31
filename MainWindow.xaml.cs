@@ -426,6 +426,15 @@ namespace wpfCCTV
                     Log("⚠️ 감지 결과가 null입니다");
                     return;
                 }
+                // ⭐ 너무 많은 감지 결과 제한 (중첩 방지)
+                if (detections.Count > 50)
+                {
+                    Log($"⚠️ 너무 많은 감지: {detections.Count}개 → 상위 50개만 사용");
+                    detections = detections
+                        .OrderByDescending(d => d.Confidence)
+                        .Take(50)
+                        .ToList();
+                }
 
                 var elapsedMs = (DateTime.Now - start).TotalMilliseconds;
                 //  Detection 객체 유효성 검증
@@ -435,11 +444,17 @@ namespace wpfCCTV
                d.ClassId >= 0 &&
                d.Confidence > 0
            ).ToList();
+
                 if (validDetections.Count != detections.Count)
                 {
                     Log($"⚠️ 잘못된 감지 결과 제외: {detections.Count - validDetections.Count}개");
                 }
-
+                // 이전 프레임 확실히 해제
+                if (CurrentDetectionFrame != null && !CurrentDetectionFrame.IsDisposed)
+                {
+                    CurrentDetectionFrame.Dispose();
+                    CurrentDetectionFrame = null;
+                }
                 // 감지 결과 그리기
                 CurrentDetectionFrame?.Dispose();
                 CurrentDetectionFrame = DrawDetections(frame.Clone(), detections);
@@ -549,8 +564,9 @@ namespace wpfCCTV
                 }
                 var color = ClassColor[detection.ClassId];
                 var cvcolor = new Scalar(color.B, color.G, color.R);
+         
                 //바운딩 박스 그리기
-                var rect = new OpenCvSharp.Rect((int)detection.X, (int)detection.Y, (int)detection.Width, (int)detection.Height);
+                var rect = new OpenCvSharp.Rect((int)detection.X, (int)detection.Y, (int)detection.Width , (int)detection.Height );
                 Cv2.Rectangle(frame, rect, cvcolor, 3);
                 //라벨 텍스트 생성
                 if (ShowedLabel || ShowedConfidence)

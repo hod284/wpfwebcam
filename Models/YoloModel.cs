@@ -1,4 +1,4 @@
-﻿using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 using System;
@@ -17,11 +17,11 @@ namespace wpfCCTV.Models
     internal class YoloModel : IDisposable
     {
         /// <summary>
-        /// ONNX 모델을 “실제로 실행하는 엔진
+        /// ONNX 모델을 "실제로 실행하는 엔진
         /// </summary>
         private InferenceSession Session;
         private readonly YoloSettings Settings;
-        private string[] ClassNames =Array.Empty<string>();
+        private string[] ClassNames = Array.Empty<string>();
         public YoloModel(YoloSettings settings)
         {
             Settings = settings;
@@ -35,8 +35,8 @@ namespace wpfCCTV.Models
         private void Initialize()
         {
             if (!File.Exists(Settings.ModelPath))
-            { 
-                throw new FileNotFoundException("모델 파일을 찾을 수 없습니다.",Settings.ModelPath);
+            {
+                throw new FileNotFoundException("모델 파일을 찾을 수 없습니다.", Settings.ModelPath);
             }
             var sessionOptions = new SessionOptions();
             if (Settings.UseGpu)
@@ -74,10 +74,10 @@ namespace wpfCCTV.Models
             //YOLO추론 실행
             var inputs = new List<NamedOnnxValue>
             {
-                // NamedOnnxValue는 “ONNX 모델에 넘기는 입력/출력 데이터의 포장 객체
+                // NamedOnnxValue는 "ONNX 모델에 넘기는 입력/출력 데이터의 포장 객체
                 NamedOnnxValue.CreateFromTensor("images", input)
             };
-             float[] output = null;
+            float[] output = null;
             using (var results = Session.Run(inputs))
             {
                 output = results.First().AsEnumerable<float>().ToArray();
@@ -88,8 +88,8 @@ namespace wpfCCTV.Models
             {
                 detections = PostprocessOutput(output, image.Width, image.Height);
             }
-          
-             return detections;
+
+            return detections;
         }
         /// <summary>
         /// 이미지 전처리 리사이즈및 정규화
@@ -99,8 +99,8 @@ namespace wpfCCTV.Models
             //1. 이미지 리사이즈
             Mat resized = new Mat();
             float scale = Math.Min(
-                          (float) Settings.InputWidth/ image.Width,
-                          (float) Settings.InputHeight/ image.Height
+                          (float)Settings.InputWidth / image.Width,
+                          (float)Settings.InputHeight / image.Height
                 );
             int newWidth = (int)(image.Width * scale);
             int newHeight = (int)(image.Height * scale);
@@ -118,8 +118,8 @@ namespace wpfCCTV.Models
             for (int y_pos = 0; y_pos < Settings.InputHeight; y_pos++)
             {
                 for (int x_pos = 0; x_pos < Settings.InputWidth; x_pos++)
-                { 
-                     var pixel =rgb.At<Vec3b>(y_pos, x_pos);
+                {
+                    var pixel = rgb.At<Vec3b>(y_pos, x_pos);
                     tensor[0, 0, y_pos, x_pos] = pixel[0] / 255.0f; // R
                     tensor[0, 1, y_pos, x_pos] = pixel[1] / 255.0f; // G
                     tensor[0, 2, y_pos, x_pos] = pixel[2] / 255.0f; // B
@@ -132,92 +132,138 @@ namespace wpfCCTV.Models
         }
         /// <summary>
         /// YOLO 출력 후처리 (멀티 모델 지원)
+        /// ⭐ YOLOv8: [1, 84, 8400] → [배치, 속성, 검출]
+        /// ⭐ YOLOv12n-face: [1, 360, 5] → [배치, 검출, 속성]
         /// </summary>
         private List<Detection> PostprocessOutput(float[] output, int originalWidth, int originalHeight)
-        { 
+        {
             var detections = new List<Detection>();
             if (output == null || output.Length == 0)
             {
                 return detections;
             }
-            // YOLOv8 출력 형식: [1, 84, 8400]
-            // 84 = 4(bbox) + 80(classes)
-            // 8400 = 감지 후보 수
-            // YOLOv12n-face: 4(bbox) + 1(face) = 5
-            int dimension = 4 + Settings.ClassCount;// 4 + 클래스수
-            if (dimension <= 4)
-            {
-                throw new InvalidOperationException($"잘못된 ClassCount: {Settings.ClassCount}");
-            }
-            int row =output.Length / dimension;
-            if (row <= 0)
-            {
-                return detections;
-            }
-            float scalex = (float)originalWidth / Settings.InputWidth;
-            float scaley = (float)originalHeight / Settings.InputHeight;
 
-            for (int i = 0; i < row; i++)
-            { 
-                 int index = i * dimension;
+            int numAttributes = 4 + Settings.ClassCount; // bbox(4) + classes
+            int numDetections;
+            bool isTransposed; // 텐서 형식 판단
 
-                // 인덱스 범위 체크
-                if (index + dimension > output.Length)
+            // ⭐ 모델 타입에 따라 텐서 형식 결정
+            if (Settings.ModelType == YoloModelType.FaceDetection)
+            {
+                // YOLOv12n-face: [1, 360, 5] → [배치, 검출, 속성]
+                numDetections = output.Length / numAttributes;
+                isTransposed = true; // 검출이 먼저, 속성이 나중
+                System.Diagnostics.Debug.WriteLine($"🔍 YOLOv12n-face 출력 분석 (Transposed):");
+            }
+            else
+            {
+                // YOLOv8: [1, 84, 8400] → [배치, 속성, 검출]
+                numDetections = output.Length / numAttributes;
+                isTransposed = false; // 속성이 먼저, 검출이 나중
+                System.Diagnostics.Debug.WriteLine($"🔍 YOLOv8 출력 분석 (Standard):");
+            }
+
+            System.Diagnostics.Debug.WriteLine($"   - 모델 타입: {Settings.ModelType}");
+            System.Diagnostics.Debug.WriteLine($"   - 총 출력 길이: {output.Length}");
+            System.Diagnostics.Debug.WriteLine($"   - 속성 수 (4 + ClassCount): {numAttributes}");
+            System.Diagnostics.Debug.WriteLine($"   - 계산된 감지 후보 수: {numDetections}");
+            System.Diagnostics.Debug.WriteLine($"   - 텐서 형식: {(isTransposed ? "[검출, 속성]" : "[속성, 검출]")}");
+
+            float scaleX = (float)originalWidth / Settings.InputWidth;
+            float scaleY = (float)originalHeight / Settings.InputHeight;
+
+            // ⭐ 첫 5개 후보의 값을 출력하여 디버깅
+            int sampleCount = Math.Min(5, numDetections);
+            System.Diagnostics.Debug.WriteLine($"\n📊 첫 {sampleCount}개 감지 후보 샘플:");
+
+            for (int i = 0; i < numDetections; i++)
+            {
+                float centerX, centerY, width, height, maxConfidence;
+                int maxClassId = 0;
+
+                if (isTransposed)
                 {
-                    break;
-                }
-                // 바운딩 박스 정보 (중심 좌표 + 너비/높이)
-                float centerx = output[index];
-               float centery = output[index + 1];
-               float width = output[index + 2];
-               float height = output[index + 3];
-                // 클래스별 확률 찾기
-                float maxConfidence = 0;
-                int maxClassid = 0;
-                // 모델 타입에 따라 다르게 처리
-                if (Settings.ModelType == YoloModelType.FaceDetection)
-                {
-                    // 얼굴 인식 : 클래스 1개만
-                    maxConfidence = output[index + 4];
-                    maxClassid = 0; // 얼굴 클래스 id는 0
-                }
-                else
-                { 
-                    // 일반 객체 감지 : 여러 클래스 중 최대값 찾기
-                    for (int c = 0; c < Settings.ClassCount; c++)
+                    // ⭐ YOLOv12n-face 형식: [배치, 검출, 속성]
+                    // 평탄화: output[detection_idx * numAttributes + attribute_idx]
+                    int baseIdx = i * numAttributes;
+                    centerX = output[baseIdx + 0];
+                    centerY = output[baseIdx + 1];
+                    width = output[baseIdx + 2];
+                    height = output[baseIdx + 3];
+
+                    if (Settings.ModelType == YoloModelType.FaceDetection)
                     {
-                        float confidence = output[index + 4 + c];
-                        if (confidence > maxConfidence)
+                        maxConfidence = output[baseIdx + 4];
+                        maxClassId = 0;
+                    }
+                    else
+                    {
+                        maxConfidence = 0;
+                        for (int c = 0; c < Settings.ClassCount; c++)
                         {
-                            maxConfidence = confidence;
-                            maxClassid = c;
+                            float confidence = output[baseIdx + 4 + c];
+                            if (confidence > maxConfidence)
+                            {
+                                maxConfidence = confidence;
+                                maxClassId = c;
+                            }
                         }
                     }
                 }
+                else
+                {
+                    // ⭐ YOLOv8 형식: [배치, 속성, 검출]
+                    // 평탄화: output[attribute_idx * numDetections + detection_idx]
+                    centerX = output[0 * numDetections + i];
+                    centerY = output[1 * numDetections + i];
+                    width = output[2 * numDetections + i];
+                    height = output[3 * numDetections + i];
+
+                    maxConfidence = 0;
+                    for (int c = 0; c < Settings.ClassCount; c++)
+                    {
+                        float confidence = output[(4 + c) * numDetections + i];
+                        if (confidence > maxConfidence)
+                        {
+                            maxConfidence = confidence;
+                            maxClassId = c;
+                        }
+                    }
+                }
+
+                // ⭐ 디버깅: 처음 몇 개 후보 출력
+                if (i < sampleCount)
+                {
+                    System.Diagnostics.Debug.WriteLine($"   [{i}] cx={centerX:F2}, cy={centerY:F2}, w={width:F2}, h={height:F2}, conf={maxConfidence:F4}, class={maxClassId}");
+                }
+
                 // 신뢰도 임계값 체크
                 if (maxConfidence < Settings.ConfidenceThreshold)
                     continue;
-                // ⭐ ClassId 유효성 체크
-                if (maxClassid < 0 || maxClassid >= ClassNames.Length)
+
+                // ClassId 유효성 체크
+                if (maxClassId < 0 || maxClassId >= ClassNames.Length)
                 {
-                    // 범위 벗어난 ClassId는 무시
                     continue;
                 }
-                // 중심 좌표 -> 최상단 좌표 변환 및 스케일 조절
-                float x = (centerx - width / 2) * scalex;
-                float y = (centery - height / 2) * scaley;
-                width *= scalex;
-                height *= scaley;
+
+                // 중심 좌표 -> 좌상단 좌표 변환 및 스케일 조절
+                float x = (centerX - width / 2) * scaleX;
+                float y = (centerY - height / 2) * scaleY;
+                width *= scaleX;
+                height *= scaleY;
+
+                // 바운딩 박스 유효성 체크
                 if (width <= 0 || height <= 0 || x < 0 || y < 0 ||
-                  x + width > originalWidth || y + height > originalHeight)
+                    x + width > originalWidth || y + height > originalHeight)
                 {
-                    // 잘못된 박스는 무시
                     continue;
                 }
-                detections.Add( new Detection
+
+                detections.Add(new Detection
                 {
-                    ClassId = maxClassid,
-                    ClassName = maxClassid < ClassNames.Length ? ClassNames[maxClassid] : $"Class_{maxClassid}",
+                    ClassId = maxClassId,
+                    ClassName = maxClassId < ClassNames.Length ? ClassNames[maxClassId] : $"Class_{maxClassId}",
                     Confidence = maxConfidence,
                     X = x,
                     Y = y,
@@ -225,29 +271,38 @@ namespace wpfCCTV.Models
                     Height = height
                 });
             }
+
+            System.Diagnostics.Debug.WriteLine($"\n   - 임계값 통과: {detections.Count}개");
+
             // NMS (Non-Maximum Suppression) 적용
-            return ApplyNMS(detections);
+            var finalDetections = ApplyNMS(detections);
+            System.Diagnostics.Debug.WriteLine($"   - NMS 후: {finalDetections.Count}개\n");
+
+            return finalDetections;
         }
         /// <summary>
         ///  NMS (Non-Maximum Suppression): 겹치는 박스 제거
         /// </summary>
         private List<Detection> ApplyNMS(List<Detection> detections)
         {
-            var finalDetections = new List<Detection>();
-            // 클래스별로 NMS 적용
-            var groupedDetections = detections.GroupBy(d => d.ClassId);
-            foreach (var group in groupedDetections)
+            if (detections.Count == 0)
+                return detections;
+
+            var result = new List<Detection>();
+            var sortedDetections = detections.OrderByDescending(d => d.Confidence).ToList();
+
+            while (sortedDetections.Count > 0)
             {
-                var dets = group.OrderByDescending(d => d.Confidence).ToList();
-                while (dets.Count > 0)
-                {
-                    var best = dets[0];
-                    finalDetections.Add(best);
-                    dets.RemoveAt(0);
-                    dets = dets.Where(d => d.ClassId != best.ClassId || CalculateIoU(best, d) < Settings.NmsThreshold).ToList();
-                }
+                var best = sortedDetections[0];
+                result.Add(best);
+                sortedDetections.RemoveAt(0);
+
+                sortedDetections = sortedDetections
+                    .Where(d => d.ClassId != best.ClassId || CalculateIoU(best, d) < Settings.NmsThreshold)
+                    .ToList();
             }
-            return finalDetections;
+
+            return result;
         }
         /// <summary>
         /// IoU (Intersection over Union) 계산
@@ -259,7 +314,10 @@ namespace wpfCCTV.Models
             float x2 = Math.Min(a.X + a.Width, b.X + b.Width);
             float y2 = Math.Min(a.Y + a.Height, b.Y + b.Height);
             float intersection = Math.Max(0, x2 - x1) * Math.Max(0, y2 - y1);
-            float union = (a.Width * a.Height) + (b.Width * b.Height) - intersection;
+            float areaA = a.Width * a.Height;
+            float areaB = b.Width * b.Height;
+            float union = areaA + areaB - intersection;
+
             return union > 0 ? intersection / union : 0;
         }
 
