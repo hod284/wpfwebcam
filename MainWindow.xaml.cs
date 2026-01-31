@@ -775,34 +775,32 @@ namespace wpfCCTV
                 if (IsStoppingCapture)
                     return;
                 IsStoppingCapture = true;
-            }
 
-            try
-            {
-                CancellationTokenSource?.Cancel();
 
-                lock (CaptureLock)
+                try
                 {
-                    if (Capture != null && !Capture.IsDisposed)
+                    CancellationTokenSource?.Cancel();
+
+                    lock (CaptureLock)
                     {
-                        Capture.Dispose(); // Dispose가 Release를 자동으로 호출함
+                        if (Capture != null && !Capture.IsDisposed)
+                        {
+                            Capture.Dispose(); // Dispose가 Release를 자동으로 호출함
+                        }
+                        Capture = null;
                     }
-                    Capture = null;
+
+                    VideoProgressPanel.Visibility = Visibility.Collapsed;
+                    CurrentFrameNumber = 0;
+
+                    ResetWebcamButtons();
+                    Log("⏹ 비디오 중지");
                 }
-
-                VideoProgressPanel.Visibility = Visibility.Collapsed;
-                CurrentFrameNumber = 0;
-
-                ResetWebcamButtons();
-                Log("⏹ 비디오 중지");
-            }
-            finally
-            {
-                lock (CaptureLock)
+                finally
                 {
                     IsStoppingCapture = false;
                 }
-            }
+            }// LOCK을 했을때 자동으로 이부분에서 쓰레드키를 반납 만약 수동으로 할 경우 Monitor.Exit(CaptureLock);을 써야함
         }
 
         private void ResetWebcamButtons()
