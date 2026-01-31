@@ -218,7 +218,7 @@ namespace wpfCCTV
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private  void LoadImageButton_Click(object sender, RoutedEventArgs e)
+        private async void LoadImageButton_Click(object sender, RoutedEventArgs e)
         {
             //파일 열기 다이얼로그
             var Dialog = new OpenFileDialog
@@ -235,7 +235,7 @@ namespace wpfCCTV
                     // 이미지 읽는 함수
                     CurrentFrame =Cv2.ImRead(Dialog.FileName);
                     Log($"이미지 파일 로드: {Dialog.FileName}");
-                    DetectAndDisplayAsync(CurrentFrame);
+                    await DetectAndDisplayAsync(CurrentFrame);
                 }
                 catch (Exception ex)
                 {
@@ -411,7 +411,7 @@ namespace wpfCCTV
             }
             Dispatcher.Invoke(StopVideoCapture);
         }
-        private  void DetectAndDisplayAsync(Mat frame)
+        private async Task DetectAndDisplayAsync(Mat frame)
         {
             // 활성 모델로 감지
             if (Manager?.ActiveModel == null || frame == null || frame.Empty())
