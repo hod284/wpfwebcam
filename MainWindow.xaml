@@ -173,9 +173,6 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button x:Name="SaveImageButton" Content="💾 현재 화면 저장" Width="140" Height="40" 
                             Margin="5" Click="SaveImageButton_Click" FontSize="13"/>
-                    <Button x:Name="SaveAllFramesButton" Content="🎞️ 모든 프레임 저장" Width="140" Height="40" 
-                            Margin="5" Click="SaveAllFramesButton_Click" FontSize="13" 
-                            ToolTip="비디오의 모든 프레임을 이미지로 저장"/>
                     <Button x:Name="TriggerSaveButton" Content="🎯 조건부 저장 설정" Width="140" Height="40" 
                             Margin="5" Click="TriggerSaveButton_Click" FontSize="13"
                             ToolTip="특정 객체 감지 시 자동 저장"/>

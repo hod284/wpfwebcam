@@ -326,6 +326,7 @@ namespace wpfCCTV
                         return;
                     }
                     // 비디오 정보 가져오기
+                    StatusText.Visibility = Visibility.Collapsed;
                     TotalFrames = (int)Capture.Get(VideoCaptureProperties.FrameCount);
                     VideoFps = Capture.Get(VideoCaptureProperties.Fps);
                     if(VideoFps<=0)
@@ -637,141 +638,6 @@ namespace wpfCCTV
                     Log($"❌ 저장 오류: {ex.Message}");
                 }
             }
-        }
-        /// <summary>
-        /// 모든 프레임 저장
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void SaveAllFramesButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (Capture == null || !Capture.IsOpened())
-            {
-                MessageBox.Show("비디오가 열려있지 않습니다.", "알림",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-            }
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
-                Description = "프레임을 저장할 폴더 선택",
-                ShowNewFolderButton = true
-            };
-
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                string folderPath = dialog.SelectedPath;
-
-                var result = MessageBox.Show(
-                    $"비디오의 모든 프레임({TotalFrames}개)을 저장하시겠습니까?\n" +
-                    $"저장 위치: {folderPath}\n\n" +
-                    "시간이 오래 걸릴 수 있습니다.",
-                    "확인", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    await SaveAllFramesAsync(folderPath);
-                }
-            }
-        }
-        private async Task SaveAllFramesAsync(string folderPath)
-        {
-            try
-            {
-                VideoCapture captureToSave;
-                lock (CaptureLock)
-                {
-                    if (Capture == null || Capture.IsDisposed || !Capture.IsOpened())
-                    {
-                        MessageBox.Show("비디오가 열려있지 않습니다.", "오류");
-                        return;
-                    }
-                    captureToSave = Capture;
-                }
-
-                // 현재 재생 중지
-                bool wasPlaying = CancellationTokenSource != null && !CancellationTokenSource.IsCancellationRequested;
-
-                if (wasPlaying)
-                {
-                    StopVideoCapture();
-                    await Task.Delay(500); // 잠시 대기
-                }
-                
-                // 비디오 다시 열기
-                lock (CaptureLock)
-                {
-                    if (Capture != null && !Capture.IsDisposed)
-                    {
-                        Capture.Set(VideoCaptureProperties.PosFrames, 0);
-                    }
-                    else
-                    {
-                        MessageBox.Show("비디오가 닫혔습니다.", "오류");
-                        return;
-                    }
-                }
-                Log($"🎞️ 모든 프레임 저장 시작...");
-                StatusText.Text = "프레임 저장 중...";
-                StatusText.Visibility = Visibility.Visible;
-                int savedCount = 0;
-                Mat frame = new Mat();
-                
-                while (true)
-                {
-                    bool readSuccess;
-                    lock (CaptureLock)
-                    {
-                        if (Capture == null || Capture.IsDisposed)
-                            break;
-                        readSuccess = Capture.Read(frame);
-                    }
-                    
-                    if (!readSuccess || frame.Empty())
-                        break;
-                
-                    // 활성 감지 모델
-                    var detections = Manager?.ActiveModel?.Detect(frame);
-                    var resultFrame = DrawDetections(frame.Clone(), detections ?? new List<Detection>());
-
-                    // 저장
-                    string filename = System.IO.Path.Combine(folderPath, $"frame_{savedCount:D5}.png");
-                    Cv2.ImWrite(filename, resultFrame);
-
-                    savedCount++;
-
-                    // UI 업데이트
-                    if (savedCount % 10 == 0)
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            StatusText.Text = $"저장 중... {savedCount}/{TotalFrames}";
-                        });
-                    }
-                    resultFrame.Dispose();
-                }
-                
-                frame.Dispose();
-                
-                lock (CaptureLock)
-                {
-                    if (Capture != null && !Capture.IsDisposed)
-                    {
-                        Capture.Set(VideoCaptureProperties.PosFrames, 0);
-                    }
-                }
-                StatusText.Visibility = Visibility.Collapsed;
-                Log($"✅ 프레임 저장 완료: {savedCount}개");
-                MessageBox.Show($"{savedCount}개의 프레임이 저장되었습니다!\n위치: {folderPath}",
-                    "완료", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                Log($"❌ 프레임 저장 오류: {ex.Message}");
-                MessageBox.Show($"프레임 저장 중 오류: {ex.Message}", "오류",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-
-
         }
         /// <summary>
         /// 조건부 저장 (트리거) 설정
