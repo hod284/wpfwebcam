@@ -466,15 +466,15 @@ namespace wpfCCTV
                 }
                 //통계업데이트 
                 UpdateStatistics(detections,elapsedMs);
-                // 자동 저장 처리
-                if (AutoSaveEnabled && detections.Count > 0)
-                {
-                    AutoSaveDetection(detections);
-                }
                 // 트리거 저장 처리
-                if (TriggerSaveEnabled && detections.Count > 0)
+                if (TriggerSaveEnabled && detections.Count > 0&& AutoSaveEnabled)
                 {
                     TriggerSaveDetection(detections);
+                }
+                // 자동 저장 처리
+                else if (AutoSaveEnabled && detections.Count > 0)
+                {
+                    AutoSaveDetection(detections);
                 }
 
 
