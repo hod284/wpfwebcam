@@ -134,6 +134,7 @@ namespace wpfCCTV.Models
         /// YOLO 출력 후처리 (멀티 모델 지원)
         /// ⭐ YOLOv8: [1, 84, 8400] → [배치, 속성, 검출]
         /// ⭐ YOLOv12n-face: [1, 360, 5] → [배치, 검출, 속성]
+        ///yolo 파일에서  파일 구조 즉 []여기안에 있는 값을 yolo 파일안에 정해져 있으며 정해진대로 넣어주면 그걸 게산해서 확률을 yolo파일에서 우리한테 넘겨줌 그걸우리는 표현해주면 된다
         /// </summary>
         private List<Detection> PostprocessOutput(float[] output, int originalWidth, int originalHeight)
         {
