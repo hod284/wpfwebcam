@@ -34,6 +34,12 @@ namespace wpfCCTV
         private int CurrentFrameNumber = 0;
         private double VideoFps = 30;
 
+        // 비디오 재생 제어
+        private bool IsPaused = false;
+        private bool IsUserSeeking = false;
+        private bool IsSeeking = false;
+        private string VideoFilePath = "";
+
         // 자동 저장 관련
         private bool AutoSaveEnabled = false;
         private string AutoSavePath = "";
@@ -318,6 +324,8 @@ namespace wpfCCTV
                 try
                 {
                     VideoProgressPanel.Visibility = Visibility.Visible;
+                    VideoFilePath = openFileDialog.FileName;
+                    IsPaused = false;
                     // 비디오 캡처 초기화
                     Capture = new VideoCapture(openFileDialog.FileName);
                     if (!Capture.IsOpened())
@@ -334,6 +342,8 @@ namespace wpfCCTV
                     VideoProgressBar.Maximum = TotalFrames>0? TotalFrames:100;
                     VideoProgressBar.Value = 0;
                     CurrentFrameNumber = 0;
+                    TotalTimeText.Text = FormatTime(TotalFrames / VideoFps);
+                    PlayPauseButton.Content = "⏸ 일시정지";
                     StartWebcamButton.IsEnabled = false;
                     StopWebcamButton.IsEnabled = true;
                     LoadImageButton.IsEnabled = false;
@@ -362,6 +372,11 @@ namespace wpfCCTV
         {
             while (!token.IsCancellationRequested)
             {
+                // 일시정지 중이면 루프 대기
+                while (IsPaused && !token.IsCancellationRequested)
+                    Thread.Sleep(50);
+                if (token.IsCancellationRequested) break;
+
                 try
                 {
                     VideoCapture captureRef;
@@ -389,10 +404,10 @@ namespace wpfCCTV
                         }
                         catch { /* 무시 */ }
                     });
-                    // 프로그래스바 업데이트
+                    // 프로그래스바 업데이트 (사용자가 스크러버를 드래그 중이면 건너뜀)
                     Dispatcher.Invoke(() =>
                     {
-                        if (VideoProgressPanel.Visibility == Visibility.Visible && TotalFrames > 0)
+                        if (!IsUserSeeking && VideoProgressPanel.Visibility == Visibility.Visible && TotalFrames > 0)
                         {
                             VideoProgressBar.Value = CurrentFrameNumber;
                             CurrentTimeText.Text = FormatTime(CurrentFrameNumber / VideoFps);
@@ -410,7 +425,8 @@ namespace wpfCCTV
                     break;
                 }
             }
-            Dispatcher.Invoke(StopVideoCapture);
+            if (!IsSeeking)
+                Dispatcher.Invoke(StopVideoCapture);
         }
         private async Task DetectAndDisplayAsync(Mat frame)
         {
@@ -765,6 +781,103 @@ namespace wpfCCTV
         }
 
         /// <summary>
+        /// 재생 / 일시정지 토글
+        /// </summary>
+        private void PlayPauseButton_Click(object sender, RoutedEventArgs e)
+        {
+            IsPaused = !IsPaused;
+            PlayPauseButton.Content = IsPaused ? "▶ 재생" : "⏸ 일시정지";
+            Log(IsPaused ? "⏸ 일시정지" : "▶ 재생 재개");
+        }
+
+        /// <summary>
+        /// 비디오 완전 중지 (Stop 버튼)
+        /// </summary>
+        private void StopVideoButton_Click(object sender, RoutedEventArgs e)
+        {
+            StopVideoCapture();
+        }
+
+        /*
+         ● ← 이게 Thumb
+         WPF 마우스 이벤트는 두 단계가 있음.
+        Preview (터널링)  : Window → Control → Child
+        Mouse (버블링)   : Child → Control → Window
+        그냥 MouseLeftButtonDown/Up 이벤트를 슬경우
+        마우스 이벤트는 포커스가 있는 컨트롤 기준으로 발화하는데, thumb를 잡고 드래그할 때 시스템이 마우스 위치를 매 프레임마다 체크합니다. 그리고 그 순간 좌표가 thumb의 히트테스트 영역에서 1픽셀이라도 벗어나면 포커스가 바뀌고 MouseUp이 thumb가 아닌 다른 곳에서 발화하거나, 아예 안 오는 경우가 됩니다.
+        사람 눈에서는 "내가 thumb 위에서 놓았다"고 느껴져도, 시스템은 마우스 좌표를 픽셀 단위로 추적하고 있으니까 그 차이가 발생하는 거죠.
+        Preview 이벤트는 이런 문제가 없는 게, 이건 컨트롤 자체 전체 영역을 기준으로 잡으니까 thumb 안에든 밖에든 Slider 영역 안에 있는 것만으로는 충분합니다. 마우스가 Slider 밖으로 완전히 나가지 않는 한 빠짐없이 잡히는 거예요.
+         */
+        /// <summary>
+        /// 스크러버 클릭/드래그 시작
+        /// </summary>
+        private void VideoProgressBar_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            IsUserSeeking = true;
+            // 클릭한 위치로 즉시 값 이동
+            var slider = (Slider)sender;
+            double pos = e.GetPosition(slider).X / slider.ActualWidth;
+            slider.Value = slider.Minimum + pos * (slider.Maximum - slider.Minimum);
+        }
+
+        /// <summary>
+        /// 스크러버 클릭/드래그 끝 → seek 실행
+        /// </summary>
+        private void VideoProgressBar_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            SeekToFrame((int)VideoProgressBar.Value);
+            IsUserSeeking = false;
+        }
+
+        /// <summary>
+        /// 지정된 프레임 번호로 탐색
+        /// </summary>
+        private void SeekToFrame(int frameNumber)
+        {
+            if (string.IsNullOrEmpty(VideoFilePath)) return;
+
+            bool wasPaused = IsPaused;
+
+            // 기존 루프가 종료될 때 StopVideoCapture를 호출하지 않도록 플래그
+            IsSeeking = true;
+
+            // 기존 스트림 중단
+            CancellationTokenSource?.Cancel();
+            // 기존 루프가 종료될 시간 확보
+            Thread.Sleep(100);
+
+            lock (CaptureLock)
+            {
+                if (Capture != null && !Capture.IsDisposed)
+                    Capture.Dispose();
+                Capture = null;
+            }
+
+            // 새로운 캡처를 열고 원하는 프레임으로 점프
+            Capture = new VideoCapture(VideoFilePath);
+            if (!Capture.IsOpened())
+            {
+                IsSeeking = false;
+                return;
+            }
+
+            Capture.Set(VideoCaptureProperties.PosFrames, frameNumber);
+            CurrentFrameNumber = frameNumber;
+            IsPaused = wasPaused;
+
+            Dispatcher.Invoke(() =>
+            {
+                VideoProgressBar.Value = frameNumber;
+                CurrentTimeText.Text = FormatTime(frameNumber / VideoFps);
+            });
+
+            // 플래그 복원 후 스트림 재시작
+            IsSeeking = false;
+            CancellationTokenSource = new CancellationTokenSource();
+            Task.Run(() => ProcessVideoStream(CancellationTokenSource.Token));
+        }
+
+        /// <summary>
         /// 비디오 스탑
         /// </summary>
         private void StopVideoCapture()
@@ -781,17 +894,17 @@ namespace wpfCCTV
                 {
                     CancellationTokenSource?.Cancel();
 
-                    lock (CaptureLock)
+                    if (Capture != null && !Capture.IsDisposed)
                     {
-                        if (Capture != null && !Capture.IsDisposed)
-                        {
-                            Capture.Dispose(); // Dispose가 Release를 자동으로 호출함
-                        }
-                        Capture = null;
+                        Capture.Dispose();
                     }
+                    Capture = null;
 
                     VideoProgressPanel.Visibility = Visibility.Collapsed;
                     CurrentFrameNumber = 0;
+                    IsPaused = false;
+                    PlayPauseButton.Content = "⏸ 일시정지";
+                    VideoFilePath = "";
 
                     ResetWebcamButtons();
                     Log("⏹ 비디오 중지");

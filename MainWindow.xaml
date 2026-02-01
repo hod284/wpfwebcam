@@ -117,33 +117,52 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 비디오 프로그레스 바 -->
-                <Grid x:Name="VideoProgressPanel" VerticalAlignment="Bottom" Margin="20,0,20,20" 
-                      Background="#CC000000" Visibility="Collapsed">
+                <!-- 비디오 프로그레스 바 + 재생 제어 -->
+                <Grid x:Name="VideoProgressPanel" VerticalAlignment="Bottom" Margin="16,0,16,16" 
+                      Background="#CC000000" Visibility="Collapsed" >
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>  <!-- 스크러버 행 -->
+                        <RowDefinition Height="Auto"/>  <!-- 버튼 행 -->
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="10,5">
+                    <!-- Row 0: 시간 + Slider 스크러버 -->
+                    <Grid Grid.Row="0" Margin="12,8,12,2">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>   <!-- 현재 시간 -->
+                            <ColumnDefinition Width="*"/>      <!-- 슬라이더 -->
+                            <ColumnDefinition Width="Auto"/>   <!-- 전체 시간 -->
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" x:Name="CurrentTimeText" Text="00:00" 
-                                   Foreground="White" FontSize="12" FontFamily="Consolas"/>
-                        <TextBlock Grid.Column="1" x:Name="VideoTitleText" Text="" 
-                                   Foreground="White" FontSize="12" TextAlignment="Center" 
-                                   TextTrimming="CharacterEllipsis"/>
+                                   Foreground="White" FontSize="11" FontFamily="Consolas"
+                                   VerticalAlignment="Center" Width="42" TextAlignment="Right"/>
+
+                        <Slider Grid.Column="1" x:Name="VideoProgressBar"
+                                Minimum="0" Maximum="100" Value="0"
+                                VerticalAlignment="Center" Margin="8,0"
+                                Height="18"
+                                Ticks="" IsSnapToTickEnabled="False"
+                                PreviewMouseLeftButtonDown="VideoProgressBar_PreviewMouseLeftButtonDown"
+                                PreviewMouseLeftButtonUp="VideoProgressBar_PreviewMouseLeftButtonUp"/>
+
                         <TextBlock Grid.Column="2" x:Name="TotalTimeText" Text="00:00" 
-                                   Foreground="White" FontSize="12" FontFamily="Consolas"/>
+                                   Foreground="White" FontSize="11" FontFamily="Consolas"
+                                   VerticalAlignment="Center" Width="42" TextAlignment="Left"/>
                     </Grid>
 
-                    <ProgressBar Grid.Row="1" x:Name="VideoProgressBar" Height="8" Margin="10,0,10,10"
-                                 Minimum="0" Maximum="100" Value="0" 
-                                 Background="#33FFFFFF" Foreground="#FF00FF00"/>
+                    <!-- Row 1: 재생 제어 버튼 -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,8">
+                        <Button x:Name="PlayPauseButton" Content="⏸ 일시정지" 
+                                Width="88" Height="24" FontSize="11" Margin="3,0"
+                                Click="PlayPauseButton_Click"
+                                Background="#444444" Foreground="White" BorderBrush="#666666" BorderThickness="1"
+                                Cursor="Hand"/>
+                        <Button x:Name="StopVideoButton" Content="⏹ 정지" 
+                                Width="60" Height="24" FontSize="11" Margin="3,0"
+                                Click="StopVideoButton_Click"
+                                Background="#C0392B" Foreground="White" BorderBrush="#E74C3C" BorderThickness="1"
+                                Cursor="Hand"/>
+                    </StackPanel>
                 </Grid>
             </Grid>
         </Border>
