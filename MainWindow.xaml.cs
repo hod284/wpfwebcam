@@ -114,13 +114,13 @@ namespace wpfCCTV
             LoadVideoButton.IsEnabled = enabled;
         }
         /// <summary>
-        /// 임계값 조정
+        /// 임계값 조정 — 드래그 중 실시간으로 값 + 모델 반영
         /// </summary>
         private void ConfidenceSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (ConfidenceText != null)
             {
-                ConfidenceText.Text = e.NewValue.ToString("F1");
+                ConfidenceText.Text = e.NewValue.ToString("F2");
             }
 
             // ⭐ 활성 모델에 실시간 반영
@@ -129,13 +129,22 @@ namespace wpfCCTV
                 try
                 {
                     Manager.ActiveModel.SetConfidenceThreshold((float)e.NewValue);
-                    // Log($"🎚️ 신뢰도 임계값 변경: {e.NewValue:F1}"); // 로그 너무 많아질 수 있음
                 }
                 catch (Exception ex)
                 {
                     Log($"임계값 변경 오류: {ex.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// 임계값 슬라이더 클릭 시 클릭 위치로 즉시 이동 (비디오 스크러버와 동일 패턴)
+        /// </summary>
+        private void ConfidenceSlider_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            var slider = (Slider)sender;
+            double pos = e.GetPosition(slider).X / slider.ActualWidth;
+            slider.Value = slider.Minimum + pos * (slider.Maximum - slider.Minimum);
         }
         /// <summary>
         /// 자동 저장 체크 박스 
@@ -199,12 +208,14 @@ namespace wpfCCTV
                 return;
             try
             {
+                float vale = float.TryParse(ConfidenceText.Text, out vale) ? vale : 0.0f;
                 if (ObjectDetectionRadio.IsChecked == true)
                 {
                     Manager.SwitchModel(YoloModelType.ObjectDetection);
                     CurrentModelText.Text = "객체 감지 모델 활성화";
                     CurrentModelText.Foreground = new SolidColorBrush(Colors.Blue);
                     Log("모델 전환: 객체 감지 모델 활성화");
+                    Manager.ActiveModel.SetConfidenceThreshold(vale);
                 }
                 else
                 {
@@ -212,6 +223,7 @@ namespace wpfCCTV
                     CurrentModelText.Text = "객체 감지 모델 활성화";
                     CurrentModelText.Foreground = new SolidColorBrush(Colors.Blue);
                     Log("모델 전환: 객체 감지 모델 활성화");
+                    Manager.ActiveModel.SetConfidenceThreshold(vale);
                 }    
             }
             catch (Exception ex)

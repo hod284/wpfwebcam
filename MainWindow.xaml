@@ -33,12 +33,13 @@
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal">
                         <TextBlock Text="신뢰도 임계값:" VerticalAlignment="Center" Margin="5,0"/>
-                        <Slider x:Name="ConfidenceSlider" Width="150" Minimum="0.1" Maximum="0.9" 
-                                Value="0.5" TickFrequency="0.1" IsSnapToTickEnabled="True" 
-                                VerticalAlignment="Center" Margin="5,0" 
-                                ValueChanged="ConfidenceSlider_ValueChanged"/>
-                        <TextBlock x:Name="ConfidenceText" Text="0.5" VerticalAlignment="Center" 
-                                   Width="40" Margin="5,0"/>
+                        <Slider x:Name="ConfidenceSlider" Width="200" Minimum="0.0" Maximum="1.0" 
+                                Value="0.5" IsSnapToTickEnabled="False"
+                                VerticalAlignment="Center" Margin="5,0" Height="18"
+                                ValueChanged="ConfidenceSlider_ValueChanged"
+                                PreviewMouseLeftButtonDown="ConfidenceSlider_PreviewMouseLeftButtonDown"/>
+                        <TextBlock x:Name="ConfidenceText" Text="0.50" VerticalAlignment="Center" 
+                                   Width="40" Margin="5,0" FontFamily="Consolas" FontSize="12"/>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
